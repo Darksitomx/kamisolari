@@ -1,0 +1,20 @@
+rasgo Saludar {
+    funcion saludo(&yo) -> String;
+}
+
+estructura Persona {
+    nombre: String,
+}
+
+implementa Saludar para Persona {
+    funcion saludo(&yo) -> String {
+        format!("hola, {}", yo.nombre)
+    }
+}
+
+funcion principal() {
+    sea p = Persona {
+        nombre: "Mila".into(),
+    };
+    imprimir("{}", p.saludo());
+}

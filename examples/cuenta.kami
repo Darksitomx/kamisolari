@@ -1,0 +1,11 @@
+funcion principal() {
+    sea mut n = 0;
+    mientras n < 5 {
+        n += 1;
+    }
+    si n > 3 {
+        imprimir("n = {n}, grande");
+    } sino {
+        imprimir("n = {n}, chico");
+    }
+}

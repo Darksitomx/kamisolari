@@ -1,0 +1,12 @@
+[package]
+name = "kamisolari"
+version = "0.1.0"
+edition = "2021"
+description = "Rust con palabras clave en espanol. Traduce proyectos reales y compila con rustc."
+
+[[bin]]
+name = "kamisolari"
+path = "src/main.rs"
+
+[dependencies]
+rustc_lexer = "0.1"
