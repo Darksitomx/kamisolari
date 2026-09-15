@@ -1,14 +1,14 @@
 rasgo Saludar {
-    funcion saludo(&yo) -> String;
+    funcion saludo(&yo) -> Texto;
 }
 
 estructura Persona {
-    nombre: String,
+    nombre: Texto,
 }
 
 implementa Saludar para Persona {
-    funcion saludo(&yo) -> String {
-        format!("hola, {}", yo.nombre)
+    funcion saludo(&yo) -> Texto {
+        formato!("hola, {}", yo.nombre)
     }
 }
 

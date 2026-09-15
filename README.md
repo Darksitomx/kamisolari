@@ -22,6 +22,9 @@ cargo run -- es src/ --salida /tmp/src-es
 cargo run -- es --todas src/main.rs
 cargo run -- rust examples/rasgo.kami
 cargo run -- construir --final .
+cargo run -- c examples/pila.kami -o /tmp/pila.c
+cc -std=c11 -O2 -o /tmp/pila /tmp/pila.c -lm && /tmp/pila
+cargo run -- c examples/pila.kami --correr-c
 ```
 
 ## Flags
@@ -48,8 +51,51 @@ Los nombres van en español. Los equivalentes en inglés siguen valiendo.
 | `--` | `--` | el resto se pasa a rustc |
 | `correr` | `run` | traduce, rustc, ejecuta |
 | `construir` | `build` | cargo build |
+| `c` | | genera C11 desde .kami o .rs |
+| `--autonomo` | | un solo .c con el runtime dentro |
+| `--no-autonomo` | | el .c pide kami.h (default con -o) |
+| `--correr-c`, `--ejecutar` | | compila el C con cc y lo ejecuta |
+| `--cc <compilador>` | | compilador C (default: cc) |
 
 `kamisolari --ayuda` enseña lo mismo.
+
+## Backend C
+
+`kamisolari c` baja tu programa a C11 legible (una pasada lo entiende,
+otra lo emite). Si tu clase pide entregas en C, este es el camino:
+escribe kamisolari, saca el `.c`.
+
+```bash
+kamisolari c programa.kami -o programa.c   # programa.c + kami.h al lado
+cc -std=c11 -O2 -o programa programa.c -lm
+kamisolari c programa.kami --correr-c      # atajo: genera, compila y corre
+kamisolari c programa.kami -o todo.c --autonomo  # un solo .c con runtime
+```
+
+El .c generado pide `kami.h` al lado (se escribe junto a `-o`); con
+`--autonomo` trae el runtime dentro (`KamiTexto`, chequeo de índices,
+tablas de `match`) en un solo archivo. El backend confía en que el
+programa vale: primero revísalo con `kamisolari correr`.
+
+Cómo cae lo orientado a objetos:
+
+| Rust/kamisolari | C |
+|---|---|
+| `estructura` | `typedef struct` + `__liberar` (drops por ámbito) |
+| `implementa` (inherente) | funciones `Tipo__metodo(Tipo *yo, …)` |
+| `rasgo` + `implementa Rasgo para T` | funciones `Tipo__Rasgo__metodo` |
+| `&yo` / `&mut yo` | `const T*` / `T*` |
+| `String`, `Vec<T>`, `Option<T>` | `KamiTexto`, `KamiVec_T`, `KamiOpcion_T` |
+
+Cubre: structs, enums, tuplas, arreglos, vectores, `String`/`&str`,
+`Option`/`Result`, `match` (con guardias), `if`/`sino`, `para`,
+`mientras`, `ciclo` + `romper`/`continuar`, métodos, rasgos, `impl Drop`,
+`impl Display`, `format!`/`println!` y mucha std
+(`Vec`, `Option`, `Result`, numéricos, `char`, texto).
+
+No cabe (error claro con código C00xx): genéricos, cierres, `async`, hilos,
+`dyn` fuera de `Display`/`Debug`, macros de usuario ni crates externos. Los `unsafe`
+crudos se bajan tal cual, bajo tu responsabilidad.
 
 ## Palabras que se quedan (no cambian)
 

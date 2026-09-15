@@ -20,6 +20,9 @@ pub struct Flags {
     pub codegen: Vec<String>,
     pub cfg: Vec<String>,
     pub rustc_extra: Vec<String>,
+    pub autonomo: bool,
+    pub correr_c: bool,
+    pub cc: String,
 }
 
 impl Flags {
@@ -46,6 +49,9 @@ pub fn parse(args: &[String]) -> Result<Flags, String> {
         codegen: Vec::new(),
         cfg: Vec::new(),
         rustc_extra: Vec::new(),
+        autonomo: false,
+        correr_c: false,
+        cc: "cc".into(),
     };
 
     let mut i = 0usize;
@@ -131,7 +137,23 @@ pub fn parse(args: &[String]) -> Result<Flags, String> {
                 f.cfg.push(need(args, i, a)?);
                 i += 2;
             }
-            "es" | "rust" | "run" | "correr" | "build" | "construir" => {
+            "--autonomo" => {
+                f.autonomo = true;
+                i += 1;
+            }
+            "--no-autonomo" | "--runtime-aparte" => {
+                f.autonomo = false;
+                i += 1;
+            }
+            "--correr-c" | "--ejecutar" => {
+                f.correr_c = true;
+                i += 1;
+            }
+            "--cc" => {
+                f.cc = need(args, i, a)?;
+                i += 2;
+            }
+            "es" | "rust" | "run" | "correr" | "build" | "construir" | "c" => {
                 if f.cmd.is_empty() {
                     f.cmd = a.to_string();
                     i += 1;
@@ -203,5 +225,20 @@ pub fn rustc_args(f: &Flags, input_rs: &std::path::Path, bin: &std::path::Path) 
     }
     a.extend(f.rustc_extra.iter().cloned());
     a.push(input_rs.display().to_string());
+    a
+}
+
+/// Argumentos para compilar el C generado (`cc archivo.c -o bin`).
+pub fn cc_args(f: &Flags, input_c: &std::path::Path, bin: &std::path::Path) -> Vec<String> {
+    let mut a = vec!["-std=c11".into(), "-o".into(), bin.display().to_string()];
+    if f.optimize || f.release {
+        a.push("-O2".into());
+    }
+    if f.debug {
+        a.push("-g".into());
+    }
+    a.extend(f.rustc_extra.iter().cloned());
+    a.push(input_c.display().to_string());
+    a.push("-lm".into());
     a
 }

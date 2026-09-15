@@ -1,0 +1,35 @@
+estructura Pila {
+    datos: Vec<i32>,
+}
+
+implementa Pila {
+    funcion nueva() -> Pila {
+        Pila { datos: Vec::new() }
+    }
+
+    funcion mete(&mut yo, x: i32) {
+        yo.datos.push(x);
+    }
+
+    funcion saca(&mut yo) -> Option<i32> {
+        yo.datos.pop()
+    }
+
+    funcion largo(&yo) -> usize {
+        yo.datos.len()
+    }
+}
+
+funcion principal() {
+    sea mut p = Pila::nueva();
+    p.mete(10);
+    p.mete(20);
+    p.mete(30);
+    imprimir("largo: {}", p.largo());
+    sea v = p.saca();
+    segun v {
+        Some(x) => imprimir("sacado: {x}"),
+        None => imprimir("vacía"),
+    }
+    imprimir("largo: {}", p.largo());
+}
