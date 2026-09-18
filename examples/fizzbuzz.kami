@@ -1,0 +1,13 @@
+funcion principal() {
+    para i en 1..=15 {
+        si i % 15 == 0 {
+            imprimir("fizzbuzz");
+        } sino si i % 3 == 0 {
+            imprimir("fizz");
+        } sino si i % 5 == 0 {
+            imprimir("buzz");
+        } sino {
+            imprimir("{i}");
+        }
+    }
+}

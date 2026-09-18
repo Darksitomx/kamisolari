@@ -1,0 +1,18 @@
+funcion principal() {
+    sea mut n = 0;
+    ciclo {
+        n += 1;
+        si n % 2 == 0 {
+            continuar;
+        }
+        imprimir("n = {n}");
+        si n >= 5 {
+            romper;
+        }
+    }
+    sea mut total = 0;
+    para x en [10, 20, 30] {
+        total += x;
+    }
+    imprimir("total = {total}");
+}

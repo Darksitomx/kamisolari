@@ -9,4 +9,7 @@ name = "kamisolari"
 path = "src/main.rs"
 
 [dependencies]
+proc-macro2 = { version = "1", features = ["span-locations"] }
 rustc_lexer = "0.1"
+syn = { version = "2.0", features = ["full", "printing", "visit"] }
+quote = "1.0"

@@ -35,6 +35,7 @@ Kamisolari - Rust con palabras clave en espanol.
 
   kamisolari es      <archivo|dir> [--salida ruta] [--todas]
   kamisolari rust    <archivo|dir> [--salida ruta]
+  kamisolari c       <archivo> [--salida ruta.c] [--correr-c]
   kamisolari correr  <archivo> [flags]
   kamisolari construir [dir] [--final] [--verboso]
 
@@ -50,6 +51,11 @@ Flags (en español; las inglesas también valen):
   --codegen, -C <opt>
   --cfg <flag>
   --todas                 traduce también if/as/in/pub/mod/use/dyn
+  --autonomo              un solo .c con el runtime dentro
+  --no-autonomo           el .c pide kami.h (default con -o; stdout
+                          siempre trae el runtime)
+  --correr-c, --ejecutar  compila el C con cc y lo ejecuta
+  --cc <compilador>       compilador C (default: cc)
   --verboso, -v
   --callado, -q
   --ver, -V               versión
@@ -84,6 +90,7 @@ fn despachar(f: Flags) -> Result<(), String> {
         }
         "es" => cmd_traducir(f, Direccion::AEs),
         "rust" => cmd_traducir(f, Direccion::ARust),
+        "c" => cmd_c(f),
         "run" | "correr" => cmd_run(f),
         "build" | "construir" => cmd_build(f),
         otro => Err(format!("comando desconocido '{otro}'. kamisolari --ayuda")),
@@ -122,6 +129,81 @@ fn cmd_traducir(f: Flags, dir: Direccion) -> Result<(), String> {
                 .write_all(out.as_bytes())
                 .map_err(|e| e.to_string())?;
         }
+    }
+    Ok(())
+}
+
+fn cmd_c(f: Flags) -> Result<(), String> {
+    use kamisolari::c::{kami_a_c, COpciones, RUNTIME_KAMI_H};
+    let input = f.input.clone().ok_or("falta archivo")?;
+    let src = leer(&input)?;
+    let nombre = if input == "-" { "<stdin>".to_string() } else { input.clone() };
+    // A stdout solo puede salir un archivo: ahí siempre va embebido.
+    let auto_ef = f.autonomo || f.output.is_none();
+    let opt = COpciones { autonomo: auto_ef };
+    let c = kami_a_c(&src, &nombre, &opt).map_err(|e| e.to_string())?;
+    if f.correr_c {
+        return cmd_c_correr(&f, &input, &c);
+    }
+    match &f.output {
+        Some(p) => {
+            fs::write(p, &c).map_err(|e| format!("no pude escribir {p}: {e}"))?;
+            vlog(&f, format!("escribio {p}"));
+            if !auto_ef {
+                // Runtime aparte: deja `kami.h` junto al .c.
+                let h = Path::new(p)
+                    .parent()
+                    .map(|d| d.join("kami.h"))
+                    .unwrap_or_else(|| Path::new("kami.h").to_path_buf());
+                fs::write(&h, RUNTIME_KAMI_H)
+                    .map_err(|e| format!("no pude escribir {}: {e}", h.display()))?;
+                vlog(&f, format!("escribio {}", h.display()));
+            }
+        }
+        None => {
+            io::stdout()
+                .write_all(c.as_bytes())
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+fn cmd_c_correr(f: &Flags, input: &str, c: &str) -> Result<(), String> {
+    use kamisolari::c::RUNTIME_KAMI_H;
+    let tmp = std::env::temp_dir();
+    let stem = if input == "-" {
+        "stdin".to_string()
+    } else {
+        Path::new(input)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("k")
+            .to_string()
+    };
+    let fc = tmp.join(format!("kamisolari-{stem}.c"));
+    let bin = tmp.join(format!("kamisolari-{stem}"));
+    fs::write(&fc, c).map_err(|e| format!("tmp: {e}"))?;
+    let mut args = cli::cc_args(f, &fc, &bin);
+    if !f.autonomo {
+        let h = tmp.join("kami.h");
+        fs::write(&h, RUNTIME_KAMI_H).map_err(|e| format!("tmp: {e}"))?;
+        args.push("-I".into());
+        args.push(tmp.display().to_string());
+    }
+    vlog(f, format!("{} {}", f.cc, args.join(" ")));
+    let status = Command::new(&f.cc)
+        .args(&args)
+        .status()
+        .map_err(|e| format!("no pude lanzar {}: {e}", f.cc))?;
+    if !status.success() {
+        return Err(format!("{} fallo", f.cc));
+    }
+    let status = Command::new(&bin)
+        .status()
+        .map_err(|e| format!("no pude ejecutar: {e}"))?;
+    if !status.success() {
+        process::exit(status.code().unwrap_or(1));
     }
     Ok(())
 }
